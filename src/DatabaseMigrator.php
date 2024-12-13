@@ -209,14 +209,15 @@ class DatabaseMigrator
   {
     $totalTablesCopied = count(array_filter($this->migrationLog, fn($log) => str_contains($log, 'Copio i dati della tabella')));
     $totalViewsCopied = count(array_filter($this->migrationLog, fn($log) => str_contains($log, 'Copia della vista')));
+    $totalErrors = count(array_filter($this->migrationLog, fn($log) => str_contains($log, 'Errore')));
 
-    echo "\n================= RESOCONTO MIGRAZIONE =================\n";
-    echo "Totale tabelle copiate: $totalTablesCopied\n";
-    echo "Totale viste copiate: $totalViewsCopied\n";
+    $totalTime = round(microtime(true) - $_SERVER['REQUEST_TIME_FLOAT'], 2);
 
-    foreach ($this->migrationLog as $logEntry) {
-      echo "  - $logEntry\n";
-    }
-    echo "=======================================================\n";
+    echo "\n================= 📋 RESOCONTO MIGRAZIONE 📋 =================\n";
+    echo "✅ Totale tabelle copiate: $totalTablesCopied\n";
+    echo "✅ Totale viste copiate: $totalViewsCopied\n";
+    echo "❌ Errori riscontrati: $totalErrors\n";
+    echo "⏱️ Tempo totale della migrazione: {$totalTime} secondi\n";
+    echo "===========================================================\n";
   }
 }
