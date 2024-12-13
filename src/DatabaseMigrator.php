@@ -23,7 +23,10 @@ class DatabaseMigrator
 
   public function __construct(array $mittenteConfig, array $destinazioneConfig)
   {
-    $this->log("\n================= INIZIO MIGRAZIONE =================\n");
+    $this->log("\n
+    ============================ \n
+    ====  INIZIO MIGRAZIONE ==== \n
+    ============================ \n");
 
     try {
       $portMittente = $mittenteConfig['port'] ?? 3306; // Porta predefinita
@@ -213,7 +216,10 @@ class DatabaseMigrator
 
     $totalTime = round(microtime(true) - $_SERVER['REQUEST_TIME_FLOAT'], 2);
 
-    echo "\n================= 📋 RESOCONTO MIGRAZIONE 📋 =================\n";
+    echo "\n
+    =================================== \n
+    ===  📋 RESOCONTO MIGRAZIONE 📋  === \n
+    =================================== \n";
     echo "✅ Totale tabelle copiate: $totalTablesCopied\n";
     echo "✅ Totale viste copiate: $totalViewsCopied\n";
     echo "❌ Errori riscontrati: $totalErrors\n";
