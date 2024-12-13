@@ -32,3 +32,4 @@ tests/_output/
 # Altri file non necessari
 *.swp
 *.swo
+composer.lock
