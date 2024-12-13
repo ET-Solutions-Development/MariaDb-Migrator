@@ -26,9 +26,10 @@ class DatabaseMigrator
     $this->log("\n================= INIZIO MIGRAZIONE =================\n");
 
     try {
+      $portMittente = $mittenteConfig['port'] ?? 3306; // Porta predefinita
       $this->log("Connessione al DB mittente...");
       $this->connServerMittente = new PDO(
-        'mysql:host=' . $mittenteConfig['host'] . ';dbname=' . $mittenteConfig['database'],
+        'mysql:host=' . $mittenteConfig['host'] . ';port=' . $portMittente . ';dbname=' . $mittenteConfig['database'],
         $mittenteConfig['user'],
         $mittenteConfig['password']
       );
@@ -39,9 +40,10 @@ class DatabaseMigrator
     }
 
     try {
+      $portDestinazione = $destinazioneConfig['port'] ?? 3306; // Porta predefinita
       $this->log("Connessione al DB destinazione...");
       $this->connServerDestinazione = new PDO(
-        'mysql:host=' . $destinazioneConfig['host'] . ';dbname=' . $destinazioneConfig['database'],
+        'mysql:host=' . $destinazioneConfig['host'] . ';port=' . $portDestinazione . ';dbname=' . $destinazioneConfig['database'],
         $destinazioneConfig['user'],
         $destinazioneConfig['password']
       );
