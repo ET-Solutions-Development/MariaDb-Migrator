@@ -106,7 +106,7 @@ class DatabaseMigrator
 
     foreach ($tablesToCopy as $tableName) {
       $this->currentTableCount++;
-      $this->log("\n----- Inizio lavorazione tabella: $tableName -----\n");
+      $this->log("\n----- Inizio lavorazione tabella: $tableName -----");
 
       if (!$this->forceCopy && $this->tableExists($tableName)) {
         $this->log("Tabella $tableName già presente. Skip.");
