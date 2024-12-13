@@ -1,0 +1,34 @@
+# Directory delle dipendenze di Composer
+/vendor/
+
+# Configurazione specifica dell'ambiente
+.env
+
+# File di log
+*.log
+
+# Cache e file temporanei
+*.cache
+*.tmp
+*.bak
+
+# File generati da IDE
+.idea/
+.vscode/
+*.iml
+
+# File di sistema (macOS, Windows, Linux)
+.DS_Store
+Thumbs.db
+
+# File di configurazione del sistema
+*.ini
+
+# File di test e copertura del codice
+coverage/
+.phpunit.result.cache
+tests/_output/
+
+# Altri file non necessari
+*.swp
+*.swo
