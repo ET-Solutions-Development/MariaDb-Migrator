@@ -1,0 +1,34 @@
+{
+  "name": "et-solutions-development/mariadb-migrator",
+  "description": "Una libreria PHP per migrare tabelle e viste tra database MariaDB/MySQL con opzioni di inclusione, esclusione e sovrascrittura.",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "ET Solutions Development",
+      "email": "dev@etsolutions.cloud"
+    }
+  ],
+  "require": {
+    "php": "^7.4 || ^8.0",
+    "ext-mysqli": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "ETSolutionsDevelopment\\MariaDbMigrator\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "ETSolutionsDevelopment\\MariaDbMigrator\\Tests\\": "tests/"
+    }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.5"
+  },
+  "scripts": {
+    "test": "phpunit"
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
