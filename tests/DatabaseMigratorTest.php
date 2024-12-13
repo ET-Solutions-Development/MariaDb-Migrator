@@ -1,6 +1,6 @@
 <?php
 
-namespace DatabaseMigrator\Tests;
+namespace DatabaseMigrator\Tests;;
 
 use PHPUnit\Framework\TestCase;
 use DatabaseMigrator\DatabaseMigrator;
