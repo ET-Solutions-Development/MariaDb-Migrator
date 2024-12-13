@@ -151,7 +151,10 @@ class DatabaseMigrator
     $batchSize = 100;
 
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $batchData[] = "('" . implode("', '", array_map([$this->connServerDestinazione, 'quote'], $row)) . "')";
+      $batchData[] = "(" . implode(", ", array_map(function ($value) {
+        return $value === null ? 'NULL' : $this->connServerDestinazione->quote($value);
+      }, $row)) . ")";
+
       if (count($batchData) >= $batchSize) {
         $this->insertBatch($tableName, $batchData);
         $batchData = [];
@@ -167,7 +170,13 @@ class DatabaseMigrator
   {
     $columns = implode(", ", array_keys($this->connServerMittente->query("SELECT * FROM $tableName LIMIT 1")->fetch(PDO::FETCH_ASSOC)));
     $sql = "INSERT INTO $tableName ($columns) VALUES " . implode(", ", $batchData);
-    $this->connServerDestinazione->exec($sql);
+
+    try {
+      $this->connServerDestinazione->exec($sql);
+    } catch (PDOException $e) {
+      $this->log("Errore SQL nell'inserimento dei dati per la tabella $tableName: " . $e->getMessage());
+      $this->log("SQL: $sql");
+    }
   }
 
   private function tableExists(string $tableName): bool
