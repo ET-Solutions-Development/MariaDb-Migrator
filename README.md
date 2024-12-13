@@ -40,7 +40,8 @@ $mittenteConfig = [
     'host' => 'mittente_host',
     'user' => 'mittente_user',
     'password' => 'mittente_password',
-    'database' => 'mittente_database'
+    'database' => 'mittente_database',
+    'port' => 3306
 ];
 
 $destinazioneConfig = [
