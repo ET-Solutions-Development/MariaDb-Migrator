@@ -2,72 +2,80 @@
 
 namespace DatabaseMigrator;
 
-use mysqli;
+use PDO;
+use PDOException;
 use Exception;
 
 class DatabaseMigrator
 {
-  private $connServerMittente;
-  private $connServerDestinazione;
-  private $excludeTables = [];
-  private $consentTables = [];
-  private $includeViews = true;
-  private $forceCopy = false;
-  private $totalTables;
-  private $currentTableCount = 0;
-  private $migrationLog = [];
+  const TABLE_TYPE_BASE = 'BASE TABLE';
+  const TABLE_TYPE_VIEW = 'VIEW';
 
-  public function __construct($mittenteConfig, $destinazioneConfig)
+  private PDO $connServerMittente;
+  private PDO $connServerDestinazione;
+  private array $excludeTables = [];
+  private array $consentTables = [];
+  private bool $includeViews = true;
+  private bool $forceCopy = false;
+  private int $totalTables = 0;
+  private int $currentTableCount = 0;
+  private array $migrationLog = [];
+
+  public function __construct(array $mittenteConfig, array $destinazioneConfig)
   {
     $this->log("\n================= INIZIO MIGRAZIONE =================\n");
 
     try {
       $this->log("Connessione al DB mittente...");
-      $this->connServerMittente = new mysqli($mittenteConfig['host'], $mittenteConfig['user'], $mittenteConfig['password'], $mittenteConfig['database']);
-      if ($this->connServerMittente->connect_error) {
-        throw new Exception("Errore connessione server mittente: " . $this->connServerMittente->connect_error);
-      }
+      $this->connServerMittente = new PDO(
+        'mysql:host=' . $mittenteConfig['host'] . ';dbname=' . $mittenteConfig['database'],
+        $mittenteConfig['user'],
+        $mittenteConfig['password']
+      );
+      $this->connServerMittente->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
       $this->log("Connessione al DB mittente riuscita.");
-    } catch (Exception $e) {
-      die($e->getMessage());
+    } catch (PDOException $e) {
+      die("Errore connessione server mittente: " . $e->getMessage());
     }
 
     try {
       $this->log("Connessione al DB destinazione...");
-      $this->connServerDestinazione = new mysqli($destinazioneConfig['host'], $destinazioneConfig['user'], $destinazioneConfig['password'], $destinazioneConfig['database'], $destinazioneConfig['port'] ?? 3306);
-      if ($this->connServerDestinazione->connect_error) {
-        throw new Exception("Errore connessione server destinazione: " . $this->connServerDestinazione->connect_error);
-      }
+      $this->connServerDestinazione = new PDO(
+        'mysql:host=' . $destinazioneConfig['host'] . ';dbname=' . $destinazioneConfig['database'],
+        $destinazioneConfig['user'],
+        $destinazioneConfig['password']
+      );
+      $this->connServerDestinazione->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
       $this->log("Connessione al DB destinazione riuscita.");
-    } catch (Exception $e) {
-      die($e->getMessage());
+    } catch (PDOException $e) {
+      die("Errore connessione server destinazione: " . $e->getMessage());
     }
   }
 
-  public function escludiTabelle(array $tables)
+  public function escludiTabelle(array $tables): void
   {
     $this->excludeTables = $tables;
   }
 
-  public function includiTabelle(array $tables)
+  public function includiTabelle(array $tables): void
   {
     $this->consentTables = $tables;
   }
 
-  public function includiView(bool $include)
+  public function includiView(bool $include): void
   {
     $this->includeViews = $include;
   }
 
-  public function forzaCopia(bool $force)
+  public function forzaCopia(bool $force): void
   {
     $this->forceCopy = $force;
   }
 
-  public function migrate()
+  public function migrate(): void
   {
     $this->log("Disabilitazione controlli foreign key...");
-    $this->connServerDestinazione->query("SET foreign_key_checks = 0");
+    $this->connServerDestinazione->exec("SET foreign_key_checks = 0");
 
     $this->copyTables();
 
@@ -75,35 +83,28 @@ class DatabaseMigrator
       $this->copyViews();
     }
 
-    $this->connServerDestinazione->query("SET foreign_key_checks = 1");
+    $this->connServerDestinazione->exec("SET foreign_key_checks = 1");
 
     $this->log("Migrazione completata.");
     $this->printSummary();
 
-    $this->connServerMittente->close();
-    $this->connServerDestinazione->close();
+    $this->connServerMittente = null;
+    $this->connServerDestinazione = null;
   }
 
-  private function copyTables()
+  private function copyTables(): void
   {
-    $result = $this->connServerMittente->query("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'");
-    if ($result === false) {
-      die("Errore ottenimento tabelle: " . $this->connServerMittente->error);
-    }
+    $stmt = $this->connServerMittente->query("SHOW FULL TABLES WHERE Table_type = '" . self::TABLE_TYPE_BASE . "'");
+    $tables = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
 
-    $tables = [];
-    while ($row = $result->fetch_array()) {
-      $tableName = $row[0];
-      if (
-        (empty($this->consentTables) && !in_array($tableName, $this->excludeTables)) ||
-        (!empty($this->consentTables) && in_array($tableName, $this->consentTables))
-      ) {
-        $tables[] = $tableName;
-      }
-    }
+    $tablesToCopy = array_filter($tables, function ($tableName) {
+      return (empty($this->consentTables) && !in_array($tableName, $this->excludeTables))
+        || (!empty($this->consentTables) && in_array($tableName, $this->consentTables));
+    });
 
-    $this->totalTables = count($tables);
-    foreach ($tables as $tableName) {
+    $this->totalTables = count($tablesToCopy);
+
+    foreach ($tablesToCopy as $tableName) {
       $this->currentTableCount++;
       $this->log("\n----- Inizio lavorazione tabella: $tableName -----\n");
 
@@ -113,69 +114,80 @@ class DatabaseMigrator
       }
 
       $this->log("Elimino la tabella $tableName se esiste.");
-      $this->connServerDestinazione->query("DROP TABLE IF EXISTS $tableName");
+      $this->connServerDestinazione->exec("DROP TABLE IF EXISTS $tableName");
 
-      $createTableResult = $this->connServerMittente->query("SHOW CREATE TABLE $tableName");
-      if ($createTableResult === false) {
-        $this->log("Errore ottenimento struttura tabella: $tableName");
-        continue;
-      }
-
-      $createTableRow = $createTableResult->fetch_assoc();
-      $createTableSQL = $createTableRow[array_keys($createTableRow)[1]];
-      $this->connServerDestinazione->query($createTableSQL);
+      $createTableSQL = $this->connServerMittente->query("SHOW CREATE TABLE $tableName")->fetch(PDO::FETCH_ASSOC)['Create Table'];
+      $this->connServerDestinazione->exec($createTableSQL);
 
       $this->copyTableData($tableName);
     }
   }
 
-  private function copyViews()
+  private function copyViews(): void
   {
-    $result = $this->connServerMittente->query("SHOW FULL TABLES WHERE Table_type = 'VIEW'");
-    while ($row = $result->fetch_array()) {
-      $viewName = $row[0];
+    $stmt = $this->connServerMittente->query("SHOW FULL TABLES WHERE Table_type = '" . self::TABLE_TYPE_VIEW . "'");
+    $views = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
+
+    foreach ($views as $viewName) {
       $this->log("Copia della vista $viewName...");
 
-      $createViewResult = $this->connServerMittente->query("SHOW CREATE VIEW $viewName");
-      $createViewRow = $createViewResult->fetch_assoc();
-      $createViewSQL = $createViewRow[array_keys($createViewRow)[1]];
-
-      $this->connServerDestinazione->query("DROP VIEW IF EXISTS $viewName");
-      $this->connServerDestinazione->query($createViewSQL);
+      $createViewSQL = $this->connServerMittente->query("SHOW CREATE VIEW $viewName")->fetch(PDO::FETCH_ASSOC)['Create View'];
+      $this->connServerDestinazione->exec("DROP VIEW IF EXISTS $viewName");
+      $this->connServerDestinazione->exec($createViewSQL);
     }
   }
 
-  private function copyTableData($tableName)
+  private function copyTableData(string $tableName): void
   {
     $this->log("Copio i dati della tabella $tableName");
-    $dataResult = $this->connServerMittente->query("SELECT * FROM $tableName");
 
-    while ($data = $dataResult->fetch_assoc()) {
-      $columns = implode(", ", array_keys($data));
-      $values = array_map(function ($value) {
-        return is_null($value) ? "NULL" : "'" . $this->connServerDestinazione->real_escape_string($value) . "'";
-      }, array_values($data));
+    $stmt = $this->connServerMittente->query("SELECT * FROM $tableName");
+    $batchData = [];
+    $batchSize = 100;
 
-      $sql = "INSERT INTO $tableName ($columns) VALUES (" . implode(", ", $values) . ")";
-      $this->connServerDestinazione->query($sql);
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+      $batchData[] = "('" . implode("', '", array_map([$this->connServerDestinazione, 'quote'], $row)) . "')";
+      if (count($batchData) >= $batchSize) {
+        $this->insertBatch($tableName, $batchData);
+        $batchData = [];
+      }
+    }
+
+    if (!empty($batchData)) {
+      $this->insertBatch($tableName, $batchData);
     }
   }
 
-  private function tableExists($tableName)
+  private function insertBatch(string $tableName, array $batchData): void
   {
-    $result = $this->connServerDestinazione->query("SHOW TABLES LIKE '$tableName'");
-    return $result && $result->num_rows > 0;
+    $columns = implode(", ", array_keys($this->connServerMittente->query("SELECT * FROM $tableName LIMIT 1")->fetch(PDO::FETCH_ASSOC)));
+    $sql = "INSERT INTO $tableName ($columns) VALUES " . implode(", ", $batchData);
+    $this->connServerDestinazione->exec($sql);
   }
 
-  private function log($message)
+  private function tableExists(string $tableName): bool
   {
-    echo "  > $message\n";
+    $stmt = $this->connServerDestinazione->query("SHOW TABLES LIKE '$tableName'");
+    return $stmt && $stmt->rowCount() > 0;
+  }
+
+  private function log(string $message): void
+  {
+    $logMessage = "[" . date('Y-m-d H:i:s') . "] " . $message . "\n";
+    echo $logMessage;
+    file_put_contents('migration.log', $logMessage, FILE_APPEND);
     $this->migrationLog[] = $message;
   }
 
-  private function printSummary()
+  private function printSummary(): void
   {
+    $totalTablesCopied = count(array_filter($this->migrationLog, fn($log) => str_contains($log, 'Copio i dati della tabella')));
+    $totalViewsCopied = count(array_filter($this->migrationLog, fn($log) => str_contains($log, 'Copia della vista')));
+
     echo "\n================= RESOCONTO MIGRAZIONE =================\n";
+    echo "Totale tabelle copiate: $totalTablesCopied\n";
+    echo "Totale viste copiate: $totalViewsCopied\n";
+
     foreach ($this->migrationLog as $logEntry) {
       echo "  - $logEntry\n";
     }
