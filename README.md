@@ -6,6 +6,8 @@
 
 **MariaDb-Migrator** è una potente libreria PHP per migrare tabelle, dati e viste tra due database MariaDB o MySQL. La libreria consente di copiare la struttura e i dati delle tabelle, con la possibilità di personalizzare quali tabelle e viste copiare. Puoi anche scegliere se forzare la copia delle tabelle già esistenti.
 
+---
+
 ## 🚀 **Funzionalità principali**
 
 - ✅ Copia la struttura e i dati delle tabelle da un database **mittente** a un **destinazione**.
@@ -18,15 +20,15 @@
 
 ## 📚 **Installazione**
 
-**1️⃣ Prerequisiti**
+### **1️⃣ Prerequisiti**
 
 - PHP >= 7.4
 - MySQL/MariaDB
 - Estensione PHP **mysqli**
 
-**2️⃣ Installa tramite Composer**
+### **2️⃣ Installa tramite Composer**
 
-Esegui il seguente comando per installare la libreria MariaDb-Migrator:
+Esegui il seguente comando per installare la libreria **MariaDb-Migrator**:
 
 ```bash
 composer require et-solutions-development/mariadb-migrator
@@ -43,7 +45,7 @@ Crea uno script PHP, ad esempio **migrate.php**, con il seguente contenuto di es
 
 require_once 'vendor/autoload.php';
 
-use ETSolutionsDevelopment\MariaDbMigrator\DatabaseMigrator;
+use DatabaseMigrator\DatabaseMigrator;
 
 // Configurazione del server mittente
 $mittenteConfig = [
@@ -80,12 +82,12 @@ $migrator->migrate();
 ## 📋 **Metodi principali**
 
 | **Metodo**                       | **Descrizione**                                             |
-| -------------------------------- | ----------------------------------------------------------- |
-| `escludiTabelle(array $tabelle)` | Esclude le tabelle specificate dalla migrazione.            |
-| `includiTabelle(array $tabelle)` | Migra solo le tabelle specificate (ha priorità).            |
-| `includiView(bool $include)`     | Specifica se includere le viste durante la migrazione.      |
-| `forzaCopia(bool $force)`        | Se **true**, forza la copia anche se la tabella esiste già. |
-| `migrate()`                      | Avvia la migrazione.                                        |
+| -------------------------------- | ---------------------------------------------------------- |
+| `escludiTabelle(array $tabelle)` | Esclude le tabelle specificate dalla migrazione.             |
+| `includiTabelle(array $tabelle)` | Migra solo le tabelle specificate (ha priorità).             |
+| `includiView(bool $include)`     | Specifica se includere le viste durante la migrazione.       |
+| `forzaCopia(bool $force)`        | Se **true**, forza la copia anche se la tabella esiste già.  |
+| `migrate()`                      | Avvia la migrazione.                                         |
 
 ---
 
