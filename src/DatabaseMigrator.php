@@ -59,6 +59,7 @@ class DatabaseMigrator
 
   public function includiTabelle(array $tables): void
   {
+    $this->checkTablesExist($tables);
     $this->consentTables = $tables;
   }
 
@@ -87,9 +88,6 @@ class DatabaseMigrator
 
     $this->log("Migrazione completata.");
     $this->printSummary();
-
-    $this->connServerMittente = null;
-    $this->connServerDestinazione = null;
   }
 
   private function copyTables(): void
@@ -116,8 +114,13 @@ class DatabaseMigrator
       $this->log("Elimino la tabella $tableName se esiste.");
       $this->connServerDestinazione->exec("DROP TABLE IF EXISTS $tableName");
 
-      $createTableSQL = $this->connServerMittente->query("SHOW CREATE TABLE $tableName")->fetch(PDO::FETCH_ASSOC)['Create Table'];
-      $this->connServerDestinazione->exec($createTableSQL);
+      try {
+        $createTableSQL = $this->connServerMittente->query("SHOW CREATE TABLE $tableName")->fetch(PDO::FETCH_ASSOC)['Create Table'];
+        $this->connServerDestinazione->exec($createTableSQL);
+      } catch (Exception $e) {
+        $this->log("Errore creazione tabella $tableName: " . $e->getMessage());
+        continue;
+      }
 
       $this->copyTableData($tableName);
     }
@@ -169,6 +172,18 @@ class DatabaseMigrator
   {
     $stmt = $this->connServerDestinazione->query("SHOW TABLES LIKE '$tableName'");
     return $stmt && $stmt->rowCount() > 0;
+  }
+
+  private function checkTablesExist(array $tables): void
+  {
+    $stmt = $this->connServerMittente->query("SHOW TABLES");
+    $availableTables = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
+
+    foreach ($tables as $table) {
+      if (!in_array($table, $availableTables)) {
+        throw new Exception("La tabella '$table' non esiste nel database mittente.");
+      }
+    }
   }
 
   private function log(string $message): void
